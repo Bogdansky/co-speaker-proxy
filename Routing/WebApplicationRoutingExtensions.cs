@@ -2,9 +2,9 @@ namespace CoSpeakerProxy.Routing;
 
 public static class WebApplicationRoutingExtensions
 {
-    public static void MapWebApplicationRoutes(this IEndpointRouteBuilder routes)
+    public static void MapWebApplicationRoutes(this IEndpointRouteBuilder routes, ConfigurationManager configuration)
     {
-        routes.MapAuthRoutes();
+        routes.MapAuthRoutes(configuration);
         routes.MapAsrRoutes();
         routes.MapGrammarRoutes();
     }

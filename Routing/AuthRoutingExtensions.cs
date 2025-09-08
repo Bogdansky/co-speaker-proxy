@@ -8,10 +8,8 @@ namespace CoSpeakerProxy.Routing;
 
 public static class AuthRoutingExtensions
 {
-    public static void MapAuthRoutes(this IEndpointRouteBuilder routes)
+    public static void MapAuthRoutes(this IEndpointRouteBuilder routes, ConfigurationManager configuration)
     {
-        var configuration = routes.ServiceProvider.GetRequiredService<ConfigurationManager>();
-
         var jwtKey = configuration["Jwt:Key"];
         
         ArgumentNullException.ThrowIfNull(jwtKey, nameof(jwtKey));
