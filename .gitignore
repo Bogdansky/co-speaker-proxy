@@ -1,0 +1,42 @@
+# .NET Core build files
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
+
+# ASP.NET Core secrets
+*.db
+*.sqlite
+appsettings.*.json
+
+# Logs
+*.log
+
+# NuGet packages
+*.nupkg
+packages/
+.nuget/
+
+# Publish output
+publish/
+out/
+
+# OS generated files
+Thumbs.db
+.DS_Store
+
+# Environment files
+.env
+
+# node_modules (if using frontend)
+node_modules/
