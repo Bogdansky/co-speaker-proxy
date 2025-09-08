@@ -28,8 +28,12 @@ namespace CoSpeakerProxy.Extensions
 
         public static IServiceCollection AddAuthentication(this IServiceCollection services, ConfigurationManager configuration)
         {
-            var jwtIssuer = configuration["Jwt:Issuer"] ?? "bel-asr-dev";
-            var jwtKey = configuration["Jwt:Key"] ?? "CHANGE_ME_IN_DEV_ONLY";
+            var jwtIssuer = configuration["Jwt:Issuer"];
+            var jwtKey = configuration["Jwt:Key"];
+
+            ArgumentNullException.ThrowIfNull(jwtIssuer);
+            ArgumentNullException.ThrowIfNull(jwtKey);
+
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
             services
