@@ -7,7 +7,7 @@ public class DeepgramClientFactory(AppSettings settings)
 {
     private volatile bool _initialized = false;
 
-    public IListenRESTClient Create(IConfiguration configuration)
+    public IListenRESTClient Create()
     {
         var apiKey = settings.Deepgram.ApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))

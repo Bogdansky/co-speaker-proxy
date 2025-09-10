@@ -17,7 +17,7 @@ public static class AsrRoutingExtensions
             AppSettings config,
             TranscribeDto dto) =>
         {
-            var client = factory.Create(new ConfigurationManager());
+            var client = factory.Create();
 
             var audioData = File.ReadAllBytes("./test_records/test.m4a");
 
@@ -30,23 +30,31 @@ public static class AsrRoutingExtensions
                 }
             );
 
-            if (response.Results is null
-            || response.Results.Channels is null
-            || response.Results.Channels.Count < 1
-            || response.Results.Channels[0].Alternatives is null
-            || response.Results.Channels[0].Alternatives.Count == 0)
+            if (!IsResponseValid(response))
             {
                 throw new NoNullAllowedException("No transcription results");
             }
 
             return Results.Ok(new
+            {
+                text = response.Results.Channels[0].Alternatives[0].Transcript,
+                words = response.Results.Channels[0].Alternatives[0].Words?.Select(w => new
                 {
-                    text = response.Results.Channels[0].Alternatives[0].Transcript,
-                    words = new[] {
-                    new { start = 0.00, end = 0.30, w = "Гэта" },
-                    new { start = 0.31, end = 0.60, w = "мокавы" }
-                }
-                });
+                    Word = w.HeardWord,
+                    w.Start,
+                    w.End,
+                    w.Confidence
+                })
+            });
         }).RequireAuthorization();
+    }
+    
+    private static bool IsResponseValid(SyncResponse response)
+    {
+        return response.Results != null
+            && response.Results.Channels != null
+            && response.Results.Channels.Count > 0
+            && response.Results.Channels[0].Alternatives != null
+            && response.Results.Channels[0].Alternatives!.Count > 0;
     }
 }
