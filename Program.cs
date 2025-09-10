@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDefaultCors();
 builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton(sp =>
 {
     var config = builder.Configuration;
