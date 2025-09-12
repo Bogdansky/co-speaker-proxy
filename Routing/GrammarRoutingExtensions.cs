@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using CoSpeakerProxy.Models;
+using CoSpeakerProxy.Services;
 
 namespace CoSpeakerProxy.Routing;
 
@@ -10,66 +11,21 @@ public static partial class GrammarRoutingExtensions
 {
     public static void MapGrammarRoutes(this IEndpointRouteBuilder routes)
     {
-        routes.MapPost("/grammar/check", async ([FromServices] IHttpClientFactory cf, GrammarDto dto) =>
+        routes.MapPost("/grammar/check", async ([FromServices] GrammarService grammarService, GrammarDto dto) =>
         {
-            return await CheckGrammar(cf, dto);
+            return await CheckGrammar(grammarService, dto);
         }).RequireAuthorization();
     }
 
-    private static async Task<object> CheckGrammar(IHttpClientFactory cf, GrammarDto dto)
+    private static async Task<IResult> CheckGrammar(GrammarService grammarService, GrammarDto dto)
     {
         try
         {
             var raw = dto.Text ?? string.Empty;
             var normalized = NormalizeTranscript(raw);
 
-            var lang = dto.Lang?.ToLowerInvariant() switch
-            {
-                "en" or "en-us" => "en-US",
-                "en-gb" => "en-GB",
-                _ => "be"
-            };
-
-            var http = cf.CreateClient("languagetool");
-            http.BaseAddress = new Uri("http://localhost:8010");
-            var form = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["language"] = lang,
-                ["text"] = normalized,
-                ["enabledOnly"] = "false",
-                ["disabledCategories"] = "STYLE" // меньше «стилистики» для речи
-            });
-
-            var resp = await http.PostAsync("v2/check", form);
-            if (!resp.IsSuccessStatusCode)
-                return Results.Problem($"LT error {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
-
-            var json = JsonNode.Parse(await resp.Content.ReadAsStringAsync());
-            var matches = json?["matches"]?.AsArray() ?? [];
-
-            var issues = matches.Select(m => new
-            {
-                rule = m?["rule"]?["id"]?.GetValue<string>() ?? "",
-                message = m?["message"]?.GetValue<string>() ?? "",
-                offset = m?["offset"]?.GetValue<int>() ?? 0,
-                length = m?["length"]?.GetValue<int>() ?? 0,
-                replacements = m?["replacements"]?.AsArray()
-                    .Select(r => r?["value"]?.GetValue<string>())
-                    .Where(v => !string.IsNullOrEmpty(v))
-                    .Take(3).ToArray() ?? []
-            }).ToList();
-
-            // Применяем первую подсказку (если есть), начиная с конца
-            var sb = new StringBuilder(normalized);
-            foreach (var m in issues.OrderByDescending(i => i.offset))
-            {
-                if (m.replacements.Length == 0) continue;
-                if (m.offset < 0 || m.length < 0 || m.offset + m.length > sb.Length) continue;
-                sb.Remove(m.offset, m.length);
-                sb.Insert(m.offset, m.replacements[0]);
-            }
-
-            return Results.Ok(new { suggested = sb.ToString(), issues, original = raw, normalized });
+            var responseText = await grammarService.CheckGrammarAsync(normalized, dto.Lang);
+            return Results.Ok(responseText);
         }
         catch (Exception ex)
         {

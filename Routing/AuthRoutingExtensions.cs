@@ -10,11 +10,7 @@ public static class AuthRoutingExtensions
 {
     public static void MapAuthRoutes(this IEndpointRouteBuilder routes, ConfigurationManager configuration)
     {
-        var jwtKey = configuration["Jwt:Key"];
-        
-        ArgumentNullException.ThrowIfNull(jwtKey, nameof(jwtKey));
-
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+        var signingKey = GetSymmetricKey(configuration);
 
         routes.MapPost("/auth/token", (AppSettings config, DeviceDto dto) =>
         {
@@ -28,5 +24,14 @@ public static class AuthRoutingExtensions
             ));
             return Results.Ok(new { token });
         });
+    }
+    
+    private static SymmetricSecurityKey GetSymmetricKey(ConfigurationManager configuration)
+    {
+        var jwtKey = configuration["Jwt:Key"];
+
+        ArgumentNullException.ThrowIfNull(jwtKey, nameof(jwtKey));
+
+        return new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
     }
 }

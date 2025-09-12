@@ -52,5 +52,43 @@ namespace CoSpeakerProxy.Extensions
                 });
             return services;
         }
+
+        public static IServiceCollection AddAppSettings(this IServiceCollection services, ConfigurationManager config)
+        {
+            services.AddSingleton(sp =>
+            {
+                CheckJwtSettings();
+                CheckDeepgramSettings();
+                CheckBedrockSettings();
+
+                return new AppSettings
+                {
+                    JwtIssuer = config["Jwt:Issuer"]!,
+                    JwtKey = config["Jwt:Key"]!,
+                    Deepgram = new DeepgramSettings(config["Deepgram:ApiKey"]!, config["Deepgram:Model"]!),
+                    AmazonBedrock = new AmazonBedrock(config["AmazonBedrock:BaseUrl"]!, config["AmazonBedrock:Model"]!, config["AmazonBedrock:ApiKey"]!)
+                };
+            });
+            return services;
+
+            void CheckJwtSettings()
+            {
+                ArgumentNullException.ThrowIfNull(config["Jwt:Issuer"]);
+                ArgumentNullException.ThrowIfNull(config["Jwt:Key"]);
+            }
+
+            void CheckDeepgramSettings()
+            {
+                ArgumentNullException.ThrowIfNull(config["Deepgram:ApiKey"]);
+                ArgumentNullException.ThrowIfNull(config["Deepgram:Model"]);
+            }
+
+            void CheckBedrockSettings()
+            {
+                ArgumentNullException.ThrowIfNull(config["AmazonBedrock:BaseUrl"]);
+                ArgumentNullException.ThrowIfNull(config["AmazonBedrock:Model"]);
+                ArgumentNullException.ThrowIfNull(config["AmazonBedrock:ApiKey"]);
+            }
+        }
     }
 }
