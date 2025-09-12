@@ -8,40 +8,54 @@ public class GrammarService
 {
     private const int MaxTokens = 1024;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<GrammarService> _logger;
     private readonly string _systemPrompt = """
         Ты — карэкатар беларускай мовы для тэкстаў пасля ASR.
-        ЗАДАЧА: выправі {0}. Выпраўляй толькі лексіка-граматычныя памылкі, НЕ дадавай знакі прыпынку, НЕ змяняй парадак слоў без патрэбы.
-        КАНЦАВЫ ФАРМАТ: адкажы РОЎНА АДНЫМ JSON, без тэксту да або пасля.
+        ЗАДАЧА: выпраўляй толькі лексіка-граматычныя памылкі, НЕ дадавай знакі прыпынку, НЕ змяняй парадак слоў без патрэбы.
+        КАНЦАВЫ ФАРМАТ: адкажы РОЎНА АДНЫМ JSON, без тэксту да або пасля. Прапануй таксама на беларускай мове.
         ПАЛІ: original, corrected, suggestions[spanStart, spanEnd, original, suggestion, ruleId, explanation, certainty].
         """;
+    private readonly string _model = "Выправі памылкі ў наступным тэксце: {0}";
 
-
-    public GrammarService(AppSettings config, IHttpClientFactory httpClientFactory)
+    public GrammarService(AppSettings config, IHttpClientFactory httpClientFactory, ILogger<GrammarService> logger)
     {
         _httpClient = httpClientFactory.CreateClient();
-        _httpClient.BaseAddress = new Uri($"{config.AmazonBedrock.BaseUrl}/{config.AmazonBedrock.Model}");
+        _httpClient.BaseAddress = new Uri(config.AmazonBedrock.BaseUrl);
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", config.AmazonBedrock.ApiKey);
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+        _logger = logger;
+        _model = config.AmazonBedrock.Model;
     }
 
     public async Task<string> CheckGrammarAsync(string text, string lang)
     {
-        var prompt = string.Format(_systemPrompt, text);
-
-        var body = new
+        try
         {
-            max_tokens = 1024,
-            temperature = 0,
-            messages = new object[]
+            var body = new
             {
-                new { role = "user", content = new [] { new { type="text", text=prompt } } }
-            }
-        };
-        
-        var json = JsonSerializer.Serialize(body);
-        var response = await _httpClient.PostAsync("invoke", new StringContent(json, Encoding.UTF8, "application/json"));
+                system = new[] { new { text = _systemPrompt } },
 
-        var responseText = await response.Content.ReadAsStringAsync();
-        return responseText;
+                messages = new object[] {
+                    new {
+                    role = "user",
+                    content = new object[] { new { text } }
+                    }
+                },
+
+                inferenceConfig = new { maxTokens = MaxTokens, temperature = 0.0, topP = 0.9 }
+            };
+
+            var json = JsonSerializer.Serialize(body);
+            var response = await _httpClient.PostAsync($"model/{_model}/converse", new StringContent(json, Encoding.UTF8, "application/json"));
+
+            var responseText = await response.Content.ReadAsStringAsync();
+            return responseText;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while checking grammar");
+            return $"Exception: {ex.Message}";
+        }
     }
 }
