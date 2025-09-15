@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using CoSpeakerProxy.Models.Builders;
 
 namespace CoSpeakerProxy.Services;
 
@@ -9,13 +10,7 @@ public class GrammarService
     private const int MaxTokens = 1024;
     private readonly HttpClient _httpClient;
     private readonly ILogger<GrammarService> _logger;
-    private readonly string _systemPrompt = """
-        Ты — карэкатар беларускай мовы для тэкстаў пасля ASR.
-        ЗАДАЧА: выпраўляй толькі лексіка-граматычныя памылкі, НЕ дадавай знакі прыпынку, НЕ змяняй парадак слоў без патрэбы.
-        КАНЦАВЫ ФАРМАТ: адкажы РОЎНА АДНЫМ JSON, без тэксту да або пасля. Прапануй таксама на беларускай мове.
-        ПАЛІ: original, corrected, suggestions[spanStart, spanEnd, original, suggestion, ruleId, explanation, certainty].
-        """;
-    private readonly string _model = "Выправі памылкі ў наступным тэксце: {0}";
+    private readonly JsonSerializerOptions DefaultJsonSerializerOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
     public GrammarService(AppSettings config, IHttpClientFactory httpClientFactory, ILogger<GrammarService> logger)
     {
@@ -32,21 +27,12 @@ public class GrammarService
     {
         try
         {
-            var body = new
-            {
-                system = new[] { new { text = _systemPrompt } },
+            var body = ConverseRequestBuilder
+                .Create()
+                .AddSystem(_systemPrompt)
+                .AddMessage("user", [new { text }]);
 
-                messages = new object[] {
-                    new {
-                    role = "user",
-                    content = new object[] { new { text } }
-                    }
-                },
-
-                inferenceConfig = new { maxTokens = MaxTokens, temperature = 0.0, topP = 0.9 }
-            };
-
-            var json = JsonSerializer.Serialize(body);
+            var json = JsonSerializer.Serialize(body, DefaultJsonSerializerOptions);
             var response = await _httpClient.PostAsync($"model/{_model}/converse", new StringContent(json, Encoding.UTF8, "application/json"));
 
             var responseText = await response.Content.ReadAsStringAsync();
