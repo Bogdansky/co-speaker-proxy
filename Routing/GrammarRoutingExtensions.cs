@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using CoSpeakerProxy.Models;
@@ -13,10 +11,26 @@ public static partial class GrammarRoutingExtensions
     {
         routes.MapPost("/grammar/check", async ([FromServices] GrammarService grammarService, GrammarDto dto) =>
         {
+            if (!IsValidGrammarRequest(dto))
+            {
+                return Results.BadRequest("Invalid request. 'Text' and 'Lang' are required.");
+            }
             return await CheckGrammar(grammarService, dto);
         }).RequireAuthorization();
     }
 
+    #region Validators
+    // TODO: replace with better solution (FluentValidation)
+    public static bool IsValidGrammarRequest(GrammarDto dto)
+    {
+        if (dto == null) return false;
+        if (string.IsNullOrWhiteSpace(dto.Text)) return false;
+        if (string.IsNullOrWhiteSpace(dto.Lang)) return false;
+        return true;
+    }
+    #endregion
+
+    #region Handlers
     private static async Task<IResult> CheckGrammar(GrammarService grammarService, GrammarDto dto)
     {
         try
@@ -32,7 +46,9 @@ public static partial class GrammarRoutingExtensions
             return Results.Problem($"Exception: {ex.Message}");
         }
     }
+    #endregion
 
+    #region Helpers
     private static string NormalizeTranscript(string s)
     {
         if (string.IsNullOrWhiteSpace(s)) return s;
@@ -53,7 +69,9 @@ public static partial class GrammarRoutingExtensions
 
         return t.Trim();
     }
+    #endregion
 
+    #region Compiled Regexes
     [GeneratedRegex(@"\s+,", RegexOptions.Compiled)]
     private static partial Regex SpacesBeforeCommaRegex();
 
@@ -71,4 +89,5 @@ public static partial class GrammarRoutingExtensions
 
     [GeneratedRegex(@"(^|[.!?]\s+)([а-яa-z])", RegexOptions.CultureInvariant | RegexOptions.Compiled)]
     private static partial Regex SentenceStartCapitalizationRegex();
+    #endregion
 }

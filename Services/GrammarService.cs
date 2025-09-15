@@ -7,12 +7,17 @@ namespace CoSpeakerProxy.Services;
 
 public class GrammarService
 {
-    private const int MaxTokens = 1024;
     private readonly HttpClient _httpClient;
     private readonly ILogger<GrammarService> _logger;
+    private readonly string _systemPrompt;
+    private readonly string _model;
     private readonly JsonSerializerOptions DefaultJsonSerializerOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
-    public GrammarService(AppSettings config, IHttpClientFactory httpClientFactory, ILogger<GrammarService> logger)
+    public GrammarService(
+        AppSettings config,
+        IHttpClientFactory httpClientFactory,
+        ILogger<GrammarService> logger,
+        PromptStorageService promptStorageService)
     {
         _httpClient = httpClientFactory.CreateClient();
         _httpClient.BaseAddress = new Uri(config.AmazonBedrock.BaseUrl);
@@ -21,8 +26,15 @@ public class GrammarService
 
         _logger = logger;
         _model = config.AmazonBedrock.Model;
+        _systemPrompt = promptStorageService.GetGrammarCheckPrompt();
     }
 
+    /// <summary>
+    /// Pass text to be checked for grammar issues. This method does not check punctuation or spelling.
+    /// </summary>
+    /// <param name="text">Text to be checked.</param>
+    /// <param name="lang">Language of passed text. Currently exists only for backward compatibility.</param>
+    /// <returns></returns>
     public async Task<string> CheckGrammarAsync(string text, string lang)
     {
         try

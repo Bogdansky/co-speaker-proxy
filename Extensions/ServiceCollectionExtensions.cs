@@ -26,6 +26,9 @@ namespace CoSpeakerProxy.Extensions
             return services;
         }
 
+        /// <summary>
+        /// Configures JWT Bearer authentication using settings from the provided configuration.    
+        /// </summary>
         public static IServiceCollection AddAuthentication(this IServiceCollection services, ConfigurationManager configuration)
         {
             var jwtIssuer = configuration["Jwt:Issuer"];

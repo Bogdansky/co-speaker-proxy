@@ -12,6 +12,7 @@ builder.Services.AddAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<GrammarService>();
+builder.Services.AddSingleton<PromptStorageService>();
 builder.Services.AddSingleton(sp =>
 {
     var config = builder.Configuration;
